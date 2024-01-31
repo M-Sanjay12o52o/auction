@@ -57,10 +57,6 @@ const io = new Server(httpServer, {
         await insertBid.run(newBid, userEmail, itemId);
         await insertBid.finalize();
 
-        // const updatedLatestBid = await db.get(
-        //   "SELECT MAX(newBid) AS currentBid, userEmail AS lastBidder, itemId FROM bids"
-        // );
-
         const updatedLatestBid = await db.get(
           "SELECT MAX(newBid) AS currentBid, userEmail AS lastBidder, itemId FROM bids WHERE itemId = ?",
           itemId
