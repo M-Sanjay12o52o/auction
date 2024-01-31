@@ -4,16 +4,15 @@ import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentBid, setLastBidder } from '../features/room/roomSlice';
-import { RootState } from "../lib/store"
+import { RootState } from "../lib/store";
 import { useEffect, useState } from 'react';
-import io, { Socket } from "socket.io-client"
+import io, { Socket } from "socket.io-client";
 
 const ItemPage = ({ item }: any) => {
     const dispatch = useDispatch();
 
-    // getting currentBid and lastBidder from the redux store
-    const currentBid = useSelector((state: RootState) => state.room.items[item.id]?.currentBid)
-    const lastBidder = useSelector((state: RootState) => state.room.items[item.id]?.lastBidder)
+    const currentBid = useSelector((state: RootState) => state.room.items[item.id]?.currentBid);
+    const lastBidder = useSelector((state: RootState) => state.room.items[item.id]?.lastBidder);
 
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(false);
@@ -22,17 +21,14 @@ const ItemPage = ({ item }: any) => {
     const userEmail = session.data?.user?.email;
 
     const handleBid = () => {
-        let newBid = currentBid !== null ? (currentBid >= 500 ? currentBid + 100 : currentBid + 50) : 50
+        let newBid = currentBid !== null ? (currentBid >= 500 ? currentBid + 100 : currentBid + 50) : 50;
 
-        // Check if newBid is NaN or not a valid number
         if (isNaN(newBid) || !isFinite(newBid)) {
-            newBid = 50; // Set a default bid amount if newBid is NaN or not a valid number
+            newBid = 50;
         }
 
-        console.log("bid: ", newBid, "bidder: ", userEmail, "itemId: ", item.id)
-
-        dispatch(setCurrentBid({ bid: newBid, itemId: item.id }))
-        dispatch(setLastBidder({ bidder: userEmail!, itemId: item.id }))
+        dispatch(setCurrentBid({ bid: newBid, itemId: item.id }));
+        dispatch(setLastBidder({ bidder: userEmail!, itemId: item.id }));
         setTimer(60);
         socket?.emit('placeBid', { newBid, userEmail, itemId: item.id });
     };
@@ -40,7 +36,6 @@ const ItemPage = ({ item }: any) => {
     useEffect(() => {
         const newSocket = io('http://localhost:3001');
 
-        // Handle socket events
         newSocket.on('connect', () => {
             console.log('Connected to socket server');
             setSocket(newSocket);
@@ -52,30 +47,25 @@ const ItemPage = ({ item }: any) => {
 
         newSocket.on('error', (error) => {
             console.error('Socket error:', error);
-            // Handle socket errors
         });
 
-        // setting the bid and bidder on update
         newSocket.on("bidUpdate", (data) => {
             const { currentBid: newCurrentBid, lastBidder: newLastBidder, itemId: newItemId } = data;
 
-            dispatch(setCurrentBid({ bid: newCurrentBid, itemId: newItemId }))
-            dispatch(setLastBidder({ bidder: newLastBidder, itemId: newItemId }))
-        })
+            dispatch(setCurrentBid({ bid: newCurrentBid, itemId: newItemId }));
+            dispatch(setLastBidder({ bidder: newLastBidder, itemId: newItemId }));
+        });
 
-        // Clean up on unmount
         return () => {
             newSocket.disconnect();
         };
     }, []);
-
 
     useEffect(() => {
         const timerId = setInterval(() => {
             setTimer((prevTimer) => {
                 if (prevTimer === 0) {
                     clearInterval(timerId);
-                    // TODO: Update product status to "Sold"
                 }
                 return prevTimer - 1;
             });
@@ -85,39 +75,42 @@ const ItemPage = ({ item }: any) => {
     }, [timer]);
 
     useEffect(() => {
-        setIsButtonDisabled(lastBidder === userEmail)
-    }, [lastBidder, userEmail])
+        setIsButtonDisabled(lastBidder === userEmail);
+    }, [lastBidder, userEmail]);
 
     return (
-        <div>
+        <div className="container mx-auto px-4 py-8 bg-white rounded-lg shadow-md">
+            <h1 className="text-3xl font-bold mb-4">
+                Time Left: <span className={`font-medium text-lg ${timer <= 10 && 'text-red-600'}`}>{timer} seconds</span>
+            </h1>
             {item ? (
                 <>
-                    <h1 className='text-4xl font-bold'>Current Bid: {currentBid}</h1>
-                    <br />
-                    <h1 className='text-4xl font-bold'>Raising By: {
-                        currentBid! >= 500 ? 100 : 50
-                    }</h1>
-                    <div>
-                        <h2>{item.title}</h2>
-                        {item.image && <Image src={item.image} alt={item.title} width={500} height={500} />}
-                        <p>Description: {item.description}</p>
-                        <p>Base Price: ${item.baseprice}</p>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-2xl font-semibold">{item.title}</h2>
+                            <p className="text-gray-500">{item.description}</p>
+                            <p className="text-gray-500">Base Price: ${item.baseprice}</p>
+                        </div>
+                        <div>
+                            <Image src={item.image} alt={item.title} width={200} height={200} />
+                        </div>
                     </div>
-
+                    <div className="mb-4">
+                        <h2 className="text-2xl font-semibold">Current Bid: ${currentBid}</h2>
+                        <p className="text-gray-500">Raising By: ${currentBid! >= 500 ? 100 : 50}</p>
+                    </div>
                     <button
-                        className={`w-full bg-blue-500 h-12 rounded-lg mt-4 ${lastBidder === userEmail ? 'blur-sm' : ''}`}
+                        className={`w-full bg-blue-500 text-white font-semibold py-2 rounded-lg transition duration-300 ${lastBidder === userEmail ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
                         onClick={handleBid}
                         disabled={isButtonDisabled}
                     >
-                        Raise
+                        Raise Bid
                     </button>
                 </>
             ) : (
                 <p>Loading item details...</p>
-            )
-            }
-
-        </div >
+            )}
+        </div>
     );
 };
 

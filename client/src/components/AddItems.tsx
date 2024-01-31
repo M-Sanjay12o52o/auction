@@ -88,7 +88,7 @@ const AddItems: FC<pageProps> = ({ }) => {
                     <option value="NOT_IN_STOCK">NOT_IN_STOCK</option>
                 </select>
                 <button
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    className="bg-gray-900 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                     type="submit"
                 >
                     Submit

@@ -13,11 +13,14 @@ export default async function Home() {
         <div>
           <div>
             <UserCard user={session?.user} pagetype={"Home"} />
+            <h1 className="text-5xl mt-8">Looking for anything in particular.</h1>
+          </div>
+          <div>
             {/* TODO:  Search Implementation */}
-            <div className="mt-24">
-              <Input placeholder="Search what you are looking for..." />
+            <div className="mt-12">
+              <Input className="border-2 border-black" placeholder="Search what you are looking for..." />
               <br />
-              <Button>Search</Button>
+              <Button className="w-full">Search</Button>
             </div>
           </div>
         </div>
