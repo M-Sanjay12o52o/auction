@@ -1,5 +1,4 @@
 import { db } from "@/db/script";
-import { NextApiRequest, NextApiResponse } from "next";
 import { getAuthSession } from "../auth/[...nextauth]/options";
 
 export async function POST(req: Request, res: Response) {
@@ -12,15 +11,16 @@ export async function POST(req: Request, res: Response) {
 
     const body = await req.json();
 
-    const { title, image, description, baseprice } = body;
+    const { title, image, description, baseprice, status } = body;
 
-    const post = await db.post.create({
+    const post = await db.item.create({
       data: {
         title: title,
         image: image,
         description: description,
         baseprice: baseprice,
         authorId: 1,
+        status: status,
       },
     });
 

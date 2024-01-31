@@ -9,7 +9,7 @@ interface pageProps {
 }
 
 const page: FC<pageProps> = async ({ params }) => {
-    const item = await db.post.findFirst({
+    const item = await db.item.findFirst({
         where: {
             id: Number(params.roomId)
         }

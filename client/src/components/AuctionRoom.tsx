@@ -37,6 +37,7 @@ const AuctionRoom: FC<PageProps> = ({ auctionRooms }) => {
                                 </div>
                                 <p className="text-white text-sm mb-2">{room.description}</p>
                                 <p className="text-white text-sm">{`Author ID: ${room.authorId}`}</p>
+                                <p className="text-white text-sm">{`Item ID: ${room.id}`}</p>
                             </div>
                             <Link href={`rooms/${room.id}`}>
                                 <p className="bg-blue-500 text-white px-4 py-2 mt-2 rounded-md hover:bg-blue-600">Enter Room</p>

@@ -10,29 +10,31 @@ import io, { Socket } from "socket.io-client"
 
 const ItemPage = ({ item }: any) => {
     const dispatch = useDispatch();
-    const currentBid = useSelector((state: RootState) => state.room.currentBid);
-    const lastBidder = useSelector((state: RootState) => state.room.lastBidder)
+
+    // getting currentBid and lastBidder from the redux store
+    const currentBid = useSelector((state: RootState) => state.room.items[item.id]?.currentBid)
+    const lastBidder = useSelector((state: RootState) => state.room.items[item.id]?.lastBidder)
+
     const [socket, setSocket] = useState<Socket | null>(null);
-
-    console.log("globalCurrentBid: ", currentBid)
-    console.log("globallastBidder: ", lastBidder)
-
+    const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(false);
+    const [timer, setTimer] = useState<number>(60);
     const session = useSession();
     const userEmail = session.data?.user?.email;
 
     const handleBid = () => {
-        // if (userEmail) {
-        //     dispatch(setLastBidder(userEmail))
-        // }
+        let newBid = currentBid !== null ? (currentBid >= 500 ? currentBid + 100 : currentBid + 50) : 50
 
-        console.log('hello from handleBid')
+        // Check if newBid is NaN or not a valid number
+        if (isNaN(newBid) || !isFinite(newBid)) {
+            newBid = 50; // Set a default bid amount if newBid is NaN or not a valid number
+        }
 
-        const newBid = currentBid !== null ? (currentBid >= 500 ? currentBid + 100 : currentBid + 50) : 50
-        dispatch(setCurrentBid(newBid))
+        console.log("bid: ", newBid, "bidder: ", userEmail, "itemId: ", item.id)
 
-        console.log("newBid client: ", newBid, "userEmail client: ", userEmail)
-
-        socket?.emit('placeBid', { newBid, userEmail });
+        dispatch(setCurrentBid({ bid: newBid, itemId: item.id }))
+        dispatch(setLastBidder({ bidder: userEmail!, itemId: item.id }))
+        setTimer(60);
+        socket?.emit('placeBid', { newBid, userEmail, itemId: item.id });
     };
 
     useEffect(() => {
@@ -53,17 +55,12 @@ const ItemPage = ({ item }: any) => {
             // Handle socket errors
         });
 
+        // setting the bid and bidder on update
         newSocket.on("bidUpdate", (data) => {
-            console.log("hello from bidUpdate: ", data)
-            const { currentBid: newCurrentBid, lastBidder: newLastBidder } = data;
-            console.log("newCurrentBid: ", newCurrentBid)
-            console.log("newLastBidder: ", newLastBidder)
-            dispatch(setCurrentBid(newCurrentBid))
-            dispatch(setLastBidder(newLastBidder))
-        })
+            const { currentBid: newCurrentBid, lastBidder: newLastBidder, itemId: newItemId } = data;
 
-        newSocket.on("test", (data) => {
-            console.log("testData: ", data)
+            dispatch(setCurrentBid({ bid: newCurrentBid, itemId: newItemId }))
+            dispatch(setLastBidder({ bidder: newLastBidder, itemId: newItemId }))
         })
 
         // Clean up on unmount
@@ -71,6 +68,25 @@ const ItemPage = ({ item }: any) => {
             newSocket.disconnect();
         };
     }, []);
+
+
+    useEffect(() => {
+        const timerId = setInterval(() => {
+            setTimer((prevTimer) => {
+                if (prevTimer === 0) {
+                    clearInterval(timerId);
+                    // TODO: Update product status to "Sold"
+                }
+                return prevTimer - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timerId);
+    }, [timer]);
+
+    useEffect(() => {
+        setIsButtonDisabled(lastBidder === userEmail)
+    }, [lastBidder, userEmail])
 
     return (
         <div>
@@ -91,7 +107,7 @@ const ItemPage = ({ item }: any) => {
                     <button
                         className={`w-full bg-blue-500 h-12 rounded-lg mt-4 ${lastBidder === userEmail ? 'blur-sm' : ''}`}
                         onClick={handleBid}
-                        disabled={lastBidder === userEmail ? true : false}
+                        disabled={isButtonDisabled}
                     >
                         Raise
                     </button>

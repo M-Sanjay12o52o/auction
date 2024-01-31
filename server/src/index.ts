@@ -3,22 +3,6 @@ import { Server } from "socket.io";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 
-let currentBid = 0;
-let lastBidder = null;
-
-const db = await open({
-  filename: "auction.db",
-  driver: sqlite3.Database,
-});
-
-await db.exec(`
-  CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_offset TEXT UNIQUE,
-      content TEXT
-  );
-`);
-
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
@@ -26,34 +10,70 @@ const io = new Server(httpServer, {
   },
 });
 
-io.on("connection", (socket: any) => {
-  console.log("socket connected: ", socket.id);
+(async () => {
+  const db = await open({
+    filename: "auction.db",
+    driver: sqlite3.Database,
+  });
 
-  // socket.emit("currentBid", currentBid);
-
-  // handle bid events
-  socket.on(
-    "placeBid",
-    ({ newBid, userEmail }: { newBid: number; userEmail: string }) => {
-      console.log("newBid server: ", newBid, "userEmail server: ", userEmail);
-      if (newBid > currentBid) {
-        currentBid = newBid;
-        lastBidder = userEmail;
-
-        console.log(
-          "currentBid after Update: ",
-          currentBid,
-          "lastBidder after Update: ",
-          lastBidder
-        );
-        io.emit("bidUpdate", { currentBid, lastBidder });
-      }
-    }
+  await db.exec(`
+  CREATE TABLE IF NOT EXISTS bids (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      newBid INTEGER,
+      userEmail TEXT,
+      itemId INTEGER, 
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
+`);
 
-  io.emit("test", "hello from test");
-});
+  io.on("connection", async (socket: any) => {
+    // Get the latest bid when a new connection is established
+    const latestBid = await db.get(
+      "SELECT MAX(newBid) AS currentBid, userEmail AS lastBidder FROM bids"
+    );
 
-httpServer.listen(3001, () => {
-  console.log("Server running at http://localhost:3001");
-});
+    const latestBidder = await db.get(
+      "SELECT userEmail AS latestBidder FROM bids ORDER BY timestamp DESC LIMIT 1"
+    );
+
+    // Send the latest bid to the new connection
+    socket.emit("bidUpdate", latestBid);
+
+    // Handle bid events
+    socket.on(
+      "placeBid",
+      async ({
+        newBid,
+        userEmail,
+        itemId,
+      }: {
+        newBid: number;
+        userEmail: string;
+        itemId: number;
+      }) => {
+        const insertBid = await db.prepare(
+          "INSERT INTO bids (newBid, userEmail, itemId) VALUES (?, ?, ?)"
+        );
+        await insertBid.run(newBid, userEmail, itemId);
+        await insertBid.finalize();
+
+        // const updatedLatestBid = await db.get(
+        //   "SELECT MAX(newBid) AS currentBid, userEmail AS lastBidder, itemId FROM bids"
+        // );
+
+        const updatedLatestBid = await db.get(
+          "SELECT MAX(newBid) AS currentBid, userEmail AS lastBidder, itemId FROM bids WHERE itemId = ?",
+          itemId
+        );        
+
+        console.log("updatedLastestBid: ", updatedLatestBid);
+
+        io.emit("bidUpdate", updatedLatestBid);
+      }
+    );
+  });
+
+  httpServer.listen(3001, () => {
+    console.log("Server running at http://localhost:3001");
+  });
+})();

@@ -11,9 +11,10 @@ const AddItems: FC<pageProps> = ({ }) => {
         image: '',
         description: "",
         baseprice: "",
+        status: "NOT_IN_STOCK",
     });
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prevState => ({
             ...prevState,
@@ -28,7 +29,8 @@ const AddItems: FC<pageProps> = ({ }) => {
             title: formData.title,
             description: formData.description,
             image: formData.image,
-            baseprice: formData.baseprice
+            baseprice: formData.baseprice,
+            status: formData.status,
         });
 
         setFormData({
@@ -36,6 +38,7 @@ const AddItems: FC<pageProps> = ({ }) => {
             image: '',
             description: "",
             baseprice: "",
+            status: "NOT_IN_STOCK",
         })
     };
 
@@ -74,6 +77,16 @@ const AddItems: FC<pageProps> = ({ }) => {
                     value={formData.baseprice}
                     onChange={handleInputChange}
                 />
+                <select
+                    name='status'
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="mb-4 shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                    <option value="IN_STOCK">IN_STOCK</option>
+                    <option value="SOLD">SOLD</option>
+                    <option value="NOT_IN_STOCK">NOT_IN_STOCK</option>
+                </select>
                 <button
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                     type="submit"
